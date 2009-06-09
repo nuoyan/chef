@@ -149,7 +149,7 @@ class Chef
       req = nil
       
       #if the request is registration, do not sign it.
-      headers = headers.merge(sign_request(method, private_key, user)) unless method == :POST && url.to_s.include? "registration"
+      headers = headers.merge(sign_request(method, private_key, user)) unless method == :POST && (url.to_s.include? "registration")
       
       case method
       when :GET

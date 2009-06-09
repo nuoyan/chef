@@ -18,12 +18,14 @@
 #
 
 require 'chef/mixin/params_validate'
-require 'chef/openid_registration'
+#require 'chef/openid_registration'
 require 'net/https'
 require 'uri'
 require 'json'
 require 'tempfile'
 require 'singleton'
+require 'mixlib/auth/signedheaderauth'
+include Mixlib::Auth::SignedHeaderAuth
 
 class Chef
   class REST
@@ -38,8 +40,9 @@ class Chef
       @url = url
       @cookies = CookieJar.instance
     end
+
     
-    # Register for an OpenID
+    # TODO: Register the node, and returns the private_key 
     def register(user, pass, validation_token=nil)
       Chef::Log.debug("Registering #{user} for an openid") 
       registration = nil
@@ -61,19 +64,6 @@ class Chef
         )
       end
     end
-    
-    # Authenticate 
-    def authenticate(user, pass)
-      Chef::Log.debug("Authenticating #{user} via openid") 
-      response = post_rest('openid/consumer/start', { 
-        "openid_identifier" => "#{Chef::Config[:openid_url]}/openid/server/node/#{user}",
-        "submit" => "Verify"
-      })
-      post_rest(
-        "#{Chef::Config[:openid_url]}#{response["action"]}",
-        { "password" => pass }
-      )
-    end
 
     # Send an HTTP GET request to the path
     #
@@ -81,23 +71,24 @@ class Chef
     # path:: The path to GET
     # raw:: Whether you want the raw body returned, or JSON inflated.  Defaults 
     #   to JSON inflated.
-    def get_rest(path, raw=false)
-      run_request(:GET, create_url(path), false, 10, raw)    
+    def get_rest(path, user, private_key, raw=false)
+      run_request(:GET, create_url(path), user, private_key, false, 10, raw)    
     end                               
                           
     # Send an HTTP DELETE request to the path
-    def delete_rest(path)             
-      run_request(:DELETE, create_url(path))       
+    def delete_rest(path, user, private_key)             
+      run_request(:DELETE, create_url(path), user, private_key)       
     end                               
     
     # Send an HTTP POST request to the path                                  
-    def post_rest(path, json)          
-      run_request(:POST, create_url(path), json)    
+    def post_rest(path, json, user, private_key = nil)
+      raise ArgumentError, "private_key does not exist" if (!path.include? "registration") && private_key == nil
+      run_request(:POST, create_url(path), user, private_key, json)    
     end                               
                                       
     # Send an HTTP PUT request to the path
-    def put_rest(path, json)           
-      run_request(:PUT, create_url(path), json)
+    def put_rest(path, json, user, private_key)           
+      run_request(:PUT, create_url(path), user, private_key, json)
     end
     
     def create_url(path)
@@ -106,6 +97,17 @@ class Chef
       else
         URI.parse("#{@url}/#{path}")
       end
+    end
+    
+    def sign_request(http_method, private_key, user_id, body = "")
+      timestamp = Time.now.utc.iso8601
+      sign_obj = Mixlib::Auth::SignedHeaderAuth.signing_object(
+                                                         :http_method=>http_method,
+                                                         :body=>body,
+                                                         :user_id=>user_id,
+                                                         :timestamp=>timestamp)
+      signed =  sign_obj.sign(private_key).merge({:host => "localhost"})
+      signed.inject({}){|memo, kv| memo["HTTP_#{kv[0].to_s.upcase}"] = kv[1];memo}
     end
     
     # Actually run an HTTP request.  First argument is the HTTP method,
@@ -117,7 +119,7 @@ class Chef
     # the helper methods (get_rest, post_rest, etc.)
     #
     # Will return the body of the response on success.
-    def run_request(method, url, data=false, limit=10, raw=false)
+    def run_request(method, url, user, private_key=nil, data=false, limit=10, raw=false)
       http_retry_delay = Chef::Config[:http_retry_delay] 
       http_retry_count = Chef::Config[:http_retry_count]
 
@@ -145,6 +147,10 @@ class Chef
         headers['Cookie'] = @cookies["#{url.host}:#{url.port}"]
       end
       req = nil
+      
+      
+      headers = headers.merge(sign_request(method, private_key, user))
+      
       case method
       when :GET
         req_path = "#{url.path}"
@@ -170,6 +176,7 @@ class Chef
       res = nil
       tf = nil
       http_retries = 1
+
 
       # TODO - Figure out how to test this block - I really have no idea how 
       # to do it without actually calling http.request... 
@@ -232,6 +239,6 @@ class Chef
         res.error!
       end
     end
- 
+    
   end
 end

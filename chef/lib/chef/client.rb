@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+require 'rubygems'
 require 'chef/config'
 require 'chef/mixin/params_validate'
 require 'chef/mixin/generate_url'

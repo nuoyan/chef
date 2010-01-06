@@ -34,7 +34,7 @@ spec = Gem::Specification.new do |s|
    "syntax",].each { |g| s.add_dependency g}
   
   s.require_path = 'lib'
-  s.files = %w(LICENSE README.rdoc Rakefile) + Dir.glob("{config,lib,spec,app,public,stubs}/**/*")
+  s.files = %w(LICENSE README.rdoc Rakefile config.ru) + Dir.glob("{bin,config,lib,spec,app,public,stubs}/**/*")
 end
 
 Rake::GemPackageTask.new(spec) do |pkg|
@@ -43,12 +43,12 @@ end
 
 desc "Install the gem"
 task :install => :package do
-  sh %{sudo gem install pkg/#{GEM_NAME}-#{CHEF_SERVER_VERSION} --no-rdoc --no-ri}
+  sh %{gem install pkg/#{GEM_NAME}-#{CHEF_SERVER_VERSION} --no-rdoc --no-ri}
 end
 
 desc "Uninstall the gem"
 task :uninstall do
-  sh %{sudo gem uninstall #{GEM_NAME} -x -v #{CHEF_SERVER_VERSION} }
+  sh %{gem uninstall #{GEM_NAME} -x -v #{CHEF_SERVER_VERSION} }
 end
 
 desc "Create a gemspec file"

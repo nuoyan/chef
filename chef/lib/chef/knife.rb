@@ -116,6 +116,10 @@ class Chef
       Mixlib::Log::Formatter.show_time = false
       Chef::Log.init(Chef::Config[:log_location])
       Chef::Log.level(Chef::Config[:log_level])
+
+      if Chef::Config[:node_name].nil?
+        raise ArgumentError, "No user specified, pass via -u or specifiy 'node_name' in #{config[:config_file] ? config[:config_file] : "~/.chef/knife.rb"}"
+      end
     end
 
     def pretty_print(data)
@@ -153,19 +157,23 @@ class Chef
     end
 
     def edit_data(data, parse_output=true)
-      filename = "knife-edit-"
-      0.upto(20) { filename += rand(9).to_s }
-      filename << ".js"
-      filename = File.join(Dir.tmpdir, filename)
-      tf = File.open(filename, "w")
-      tf.sync = true
-      tf.puts JSON.pretty_generate(data)
-      tf.close
-      raise "Please set EDITOR environment variable" unless system("#{config[:editor]} #{tf.path}") 
-      tf = File.open(filename, "r")
-      output = tf.gets(nil)
-      tf.close
-      File.unlink(filename)
+      output = JSON.pretty_generate(data)
+      
+      if (!config[:no_editor])
+        filename = "knife-edit-"
+        0.upto(20) { filename += rand(9).to_s }
+        filename << ".js"
+        filename = File.join(Dir.tmpdir, filename)
+        tf = File.open(filename, "w")
+        tf.sync = true
+        tf.puts output
+        tf.close
+        raise "Please set EDITOR environment variable" unless system("#{config[:editor]} #{tf.path}") 
+        tf = File.open(filename, "r")
+        output = tf.gets(nil)
+        tf.close
+        File.unlink(filename)
+      end
 
       parse_output ? JSON.parse(output) : output
     end

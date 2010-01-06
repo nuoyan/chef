@@ -184,6 +184,7 @@ class Chef
       json_body = data ? data.to_json : nil 
 
       if @sign_request
+        raise ArgumentError, "Cannot sign the request without a client name, check that :node_name is assigned" if @client_name.nil?
         Chef::Log.debug("Signing the request as #{@client_name}")
         if json_body
           headers.merge!(sign_request(method, OpenSSL::PKey::RSA.new(@signing_key), @client_name, json_body, "#{url.host}:#{url.port}"))
@@ -265,7 +266,7 @@ class Chef
         raise Timeout::Error, "Timeout connecting to #{url.host}:#{url.port} for #{req.path}, giving up"
       end
       
-      
+    
       if res.kind_of?(Net::HTTPSuccess)
         if res['set-cookie']
           @cookies["#{url.host}:#{url.port}"] = res['set-cookie']

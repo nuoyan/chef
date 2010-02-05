@@ -32,7 +32,8 @@ require 'json'
 class Chef
   class Node
     
-    attr_accessor :attribute, :recipe_list, :couchdb_rev, :couchdb_id, :run_state, :run_list, :override_attrs, :default_attrs, :cookbook_loader
+    attr_accessor :attribute, :recipe_list, :couchdb, :couchdb_rev, :couchdb_id, :run_state, :run_list, :override_attrs, :default_attrs, :cookbook_loader
+    attr_reader :node
     
     include Chef::Mixin::CheckHelper
     include Chef::Mixin::FromFile
@@ -124,8 +125,9 @@ class Chef
     }
     
     # Create a new Chef::Node object.
-    def initialize
+    def initialize(couchdb=nil)
       @name = nil
+      @node = self
 
       @attribute = Mash.new
       @override_attrs = Mash.new
@@ -134,7 +136,7 @@ class Chef
 
       @couchdb_rev = nil
       @couchdb_id = nil
-      @couchdb = Chef::CouchDB.new
+      @couchdb = couchdb ? couchdb : Chef::CouchDB.new
 
       @run_state = {
         :template_cache => Hash.new,
@@ -262,16 +264,6 @@ class Chef
       end
     end
     
-    # Returns an Array of recipes.  If you call it with arguments, they will become the new
-    # list of recipes.
-    def recipes(*args)
-      if args.length > 0
-        @run_list.reset(args)
-      else
-        @run_list
-      end
-    end
-
     # Returns true if this Node expects a given role, false if not.
     def role?(role_name)
       @run_list.include?("role[#{role_name}]")
@@ -287,6 +279,8 @@ class Chef
       end
     end
 
+    alias_method :recipes, :run_list
+
     # Returns true if this Node expects a given role, false if not.
     def run_list?(item)
       @run_list.detect { |r| r == item } ? true : false
@@ -297,7 +291,7 @@ class Chef
       Chef::Log.debug("Adding JSON Attributes")
       attrs.each do |key, value|
         if ["recipes", "run_list"].include?(key)
-          append_recipes(value)
+          run_list(value)
         else
           Chef::Log.debug("JSON Attribute: #{key} - #{value.inspect}")
           store(key, value)
@@ -361,8 +355,8 @@ class Chef
     
     # List all the Chef::Node objects in the CouchDB.  If inflate is set to true, you will get
     # the full list of all Nodes, fully inflated.
-    def self.cdb_list(inflate=false)
-      couchdb = Chef::CouchDB.new
+    def self.cdb_list(inflate=false, couchdb=nil)
+      couchdb = couchdb ? couchdb : Chef::CouchDB.new
       rs = couchdb.list("nodes", inflate)
       if inflate
         rs["rows"].collect { |r| r["value"] }
@@ -385,8 +379,8 @@ class Chef
     end
     
     # Load a node by name from CouchDB
-    def self.cdb_load(name)
-      couchdb = Chef::CouchDB.new
+    def self.cdb_load(name, couchdb=nil)
+      couchdb = couchdb ? couchdb : Chef::CouchDB.new
       couchdb.load("node", name)
     end
 
@@ -436,25 +430,14 @@ class Chef
     end 
 
     # Set up our CouchDB design document
-    def self.create_design_document
-      couchdb = Chef::CouchDB.new
+    def self.create_design_document(couchdb=nil)
+      couchdb = couchdb ? couchdb : Chef::CouchDB.new
       couchdb.create_design_document("nodes", DESIGN_DOCUMENT)
     end
     
     # As a string
     def to_s
       "node[#{@name}]"
-    end
-
-    private
-    
-    def append_recipes(recipes_to_append=[])
-      recipes_to_append.each do |recipe|
-        unless recipes.include?(recipe)
-          Chef::Log.debug("Adding recipe #{recipe}")
-          recipes << recipe
-        end
-      end
     end
 
   end

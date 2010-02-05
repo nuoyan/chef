@@ -48,9 +48,7 @@ class Chef
     end
     
     def build_provider(resource)
-      provider_klass = resource.provider
-      provider_klass ||= Chef::Provider.const_get(resource.class.to_s.split('::').last) rescue nil
-      provider_klass ||= Chef::Platform.find_provider_for_node(@node, resource)
+      provider_klass = Chef::Platform.find_provider_for_node(@node, resource)
       Chef::Log.debug("#{resource} using #{provider_klass.to_s}")
       provider = provider_klass.new(@node, resource, @collection, @definitions, @cookbook_loader)
       provider.load_current_resource
@@ -96,7 +94,7 @@ class Chef
           
           # Check if this resource has an only_if block - if it does, skip it.
           if resource.only_if
-            unless Chef::Mixin::Command.only_if(resource.only_if)
+            unless Chef::Mixin::Command.only_if(resource.only_if, resource.only_if_args)
               Chef::Log.debug("Skipping #{resource} due to only_if")
               next
             end
@@ -104,7 +102,7 @@ class Chef
           
           # Check if this resource has a not_if block - if it does, skip it.
           if resource.not_if
-            unless Chef::Mixin::Command.not_if(resource.not_if)
+            unless Chef::Mixin::Command.not_if(resource.not_if, resource.not_if_args)
               Chef::Log.debug("Skipping #{resource} due to not_if")
               next
             end

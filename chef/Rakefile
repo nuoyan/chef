@@ -2,14 +2,14 @@ require 'rubygems'
 require 'rake/gempackagetask'
 require 'rake/rdoctask'
 require './tasks/rspec.rb'
-
+ 
 GEM = "chef"
 CHEF_VERSION = "0.8.0"
 AUTHOR = "Adam Jacob"
 EMAIL = "adam@opscode.com"
 HOMEPAGE = "http://wiki.opscode.com/display/chef"
 SUMMARY = "A systems integration framework, built to bring the benefits of configuration management to your entire infrastructure."
-
+ 
 spec = Gem::Specification.new do |s|
   s.name = GEM
   s.version = CHEF_VERSION
@@ -25,34 +25,34 @@ spec = Gem::Specification.new do |s|
   s.add_dependency "mixlib-config", ">= 1.0.12"
   s.add_dependency "ohai", ">= 0.3.6"
   s.add_dependency "bunny", ">= 0.6.0"
-  %w{mixlib-cli mixlib-log mixlib-authentication json erubis extlib amqp ruby-hmac moneta}.each { |gem| s.add_dependency gem }
+  %w{mixlib-cli mixlib-log mixlib-authentication json erubis extlib amqp ruby-hmac deep_merge moneta}.each { |gem| s.add_dependency gem }
   
-  s.bindir       = "bin"
-  s.executables  = %w( chef-client chef-solo knife shef )
+  s.bindir = "bin"
+  s.executables = %w( chef-client chef-solo knife shef )
   s.require_path = 'lib'
   s.files = %w(LICENSE README.rdoc) + Dir.glob("{distro,lib}/**/*")
 end
-
+ 
 Rake::GemPackageTask.new(spec) do |pkg|
   pkg.gem_spec = spec
 end
-
+ 
 Rake::RDocTask.new do |rd|
   rd.rdoc_files.include("lib/**/*.rb")
 end
-
+ 
 task :install => :package do
   sh %{gem install pkg/#{GEM}-#{CHEF_VERSION} --no-rdoc --no-ri}
 end
-
+ 
 task :uninstall do
   sh %{gem uninstall #{GEM} -x -v #{CHEF_VERSION} }
 end
-
+ 
 desc "create a gemspec file"
 task :make_spec do
   File.open("#{GEM}.gemspec", "w") do |file|
     file.puts spec.to_ruby
   end
 end
-
+ 

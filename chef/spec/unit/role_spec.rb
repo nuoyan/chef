@@ -43,6 +43,10 @@ describe Chef::Role do
     it "should not accept spaces" do
       lambda { @role.name "ops master" }.should raise_error(ArgumentError)
     end
+    
+    it "cannot be blank" do
+      lambda { @role.name("")}.should raise_error(Chef::Exceptions::ValidationFailed)
+    end
 
     it "should throw an ArgumentError if you feed it anything but a string" do
       lambda { @role.name Hash.new }.should raise_error(ArgumentError)

@@ -87,14 +87,21 @@ class Chef
       Chef::REST.new(Chef::Config[:chef_server_url])
     end
 
-    def name(arg=nil) 
-      set_or_return(
-        :name,
-        arg,
-        :regex => /^[\-[:alnum:]_]+$/
-      )
+    # Set the name of this Role, or return the current name.
+    def name(arg=nil)
+      if arg != nil
+        validate(
+          {:name => arg }, 
+          {:name => { :kind_of => String,
+                      :cannot_be => :blank,
+                      :regex => /^[\-[:alnum:]_]+$/}
+          })
+        @name = arg
+      else
+        @name
+      end
     end
-
+    
     def description(arg=nil) 
       set_or_return(
         :description,

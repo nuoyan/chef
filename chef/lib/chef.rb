@@ -31,7 +31,7 @@ class Chef
 end
 
 # Adds a Dir.glob to Ruby 1.8.5, for compat
-if RUBY_VERSION < "1.8.6" 
+if RUBY_VERSION < "1.8.6" || RUBY_PLATFORM =~ /mswin|mingw32/
   class Dir 
     class << self 
       alias_method :glob_, :glob 
@@ -41,6 +41,7 @@ if RUBY_VERSION < "1.8.6"
             pattern.is_a? Array and !pattern.empty?
           ) or pattern.is_a? String
         )
+        pattern.gsub!(/\\/, "/") if RUBY_PLATFORM =~ /mswin|mingw32/
         [pattern].flatten.inject([]) { |r, p| r + glob_(p, flags) }
       end
       alias_method :[], :glob 

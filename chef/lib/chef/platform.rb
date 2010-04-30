@@ -106,6 +106,21 @@ class Chef
           :mdadm => Chef::Provider::Mdadm
         }
       },
+      :mswin => {
+        :default => {
+          :service => Chef::Provider::Service::Windows
+        }
+      },
+      :mingw32 => {
+        :default => {
+          :service => Chef::Provider::Service::Windows
+        }
+      },
+      :windows => {
+        :default => {
+          :service => Chef::Provider::Service::Windows
+        }
+      },
       :solaris  => {},
       :default  => {
         :file => Chef::Provider::File,

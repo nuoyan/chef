@@ -45,5 +45,9 @@ class Chef
     class AttributeNotFound < RuntimeError; end
     class InvalidCommandOption < RuntimeError; end
     class CommandTimeout < RuntimeError; end
+    class ShellCommandFailed < RuntimeError; end
+    class RequestedUIDUnavailable < RuntimeError; end
+    class InvalidHomeDirectory < ArgumentError; end
+    class DsclCommandFailed < RuntimeError; end
   end
 end

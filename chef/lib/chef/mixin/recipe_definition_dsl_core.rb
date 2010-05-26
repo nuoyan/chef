@@ -51,10 +51,9 @@ class Chef
           # Otherwise, we're rocking the regular resource call route.
           method_name = method_symbol.to_s
           rname = convert_to_class_name(method_name)
-          
+
           super unless Chef::Resource.const_defined?(rname)
-          
-          raise ArgumentError, "Creating a resource requires a name argument" if args.length < 1
+          raise ArgumentError, "You must supply a name when declaring a #{method_name} resource" unless args.size > 0
 
           # If we have a resource like this one, we want to steal its state
           args << run_context

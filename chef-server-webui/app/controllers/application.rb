@@ -243,7 +243,9 @@ class Application < Merb::Controller
     result = Array.new
     cookbooks = r.get_rest("cookbooks")
     cookbooks.keys.sort.each do |key|
-      cb = r.get_rest(cookbooks[key])
+      # for now, only showing the newest version
+      version = r.get_rest("cookbooks/#{key}")[key].sort!{|x,y| y <=> x }.first
+      cb = r.get_rest("cookbooks/#{key}/#{version}").manifest
       cb["recipes"].each do |recipe|
         recipe["name"] =~ /(.+)\.rb/
         r_name = $1;

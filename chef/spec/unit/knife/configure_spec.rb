@@ -26,16 +26,30 @@ describe Chef::Knife::Configure do
     @knife.new_client_name.should == Etc.getlogin
   end
   
-  it "asks the user for the existing admin client's name" do
+  it "asks the user for the existing admin client's name if -i is specified" do
+    @knife.config[:initial] = true
     @knife.ask_user_for_config
     @out.string.should match(Regexp.escape("Your existing admin client user name? [chef-webui]"))
     @knife.admin_client_name.should == 'chef-webui'
   end
   
-  it "asks the user for the location of the existing admin key" do
+  it "should not ask the user for the existing admin client's name if -i is not specified" do
+    @knife.ask_user_for_config
+    @out.string.should_not match(Regexp.escape("Your existing admin client user name? [chef-webui]"))
+    @knife.admin_client_name.should_not == 'chef-webui'
+  end
+  
+  it "asks the user for the location of the existing admin key if -i is specified" do
+    @knife.config[:initial] = true
     @knife.ask_user_for_config
     @out.string.should match(Regexp.escape("The location of your existing admin key? [/etc/chef/webui.pem]"))
     @knife.admin_client_key.should == '/etc/chef/webui.pem'
+  end
+  
+  it "should not ask the user for the location of the existing admin key if -i is not specified" do
+    @knife.ask_user_for_config
+    @out.string.should_not match(Regexp.escape("The location of your existing admin key? [/etc/chef/webui.pem]"))
+    @knife.admin_client_key.should_not == '/etc/chef/webui.pem'
   end
   
   it "asks the user for the location of a chef repo" do

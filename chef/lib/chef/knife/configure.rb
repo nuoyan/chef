@@ -115,8 +115,10 @@ EOH
       def ask_user_for_config
         @chef_server            = config[:chef_server_url] || ask_question("Your chef server URL? ", :default => 'http://localhost:4000')
         @new_client_name        = config[:node_name] || ask_question("Select a user name for your new client: ", :default => Etc.getlogin)
-        @admin_client_name      = config[:admin_client_name] || ask_question("Your existing admin client user name? ", :default => 'chef-webui')
-        @admin_client_key       = config[:admin_client_key] || ask_question("The location of your existing admin key? ", :default => '/etc/chef/webui.pem')
+        if config[:initial]
+          @admin_client_name      = config[:admin_client_name] || ask_question("Your existing admin client user name? ", :default => 'chef-webui')
+          @admin_client_key       = config[:admin_client_key] || ask_question("The location of your existing admin key? ", :default => '/etc/chef/webui.pem')
+        end
         @validation_client_name = config[:validation_client_name] || ask_question("Your validation client user name? ", :default => 'chef-validator')
         @validation_key         = config[:validation_key] || ask_question("The location of your validation key? ", :default => '/etc/chef/validation.pem')
         @chef_repo              = config[:repository] || ask_question("Path to a chef repository (or leave blank)? ")

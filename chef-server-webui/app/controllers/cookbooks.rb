@@ -33,8 +33,9 @@ class Cookbooks < Application
   end
   
   def index
+    provides :html, :json
     @cl = begin
-            if session[:environment]
+            if session[:environment] && !params[:ignore_env]
               result = Chef::REST.new(Chef::Config[:chef_server_url]).get_rest("environments/#{session[:environment]}/cookbooks")
             else
               result = Chef::REST.new(Chef::Config[:chef_server_url]).get_rest("cookbooks/_latest")
@@ -49,13 +50,13 @@ class Cookbooks < Application
             @_message = {:error => $!}
             {}
           end 
-    render
+    display @cl
   end
 
   def show
     begin
       # array of versions, sorted from large to small e.g. ["0.20.0", "0.1.0"]
-      versions = Chef::REST.new(Chef::Config[:chef_server_url]).get_rest("cookbooks/#{cookbook_id}")[cookbook_id].sort!{|x,y| y <=> x }      
+      versions = get_versions
       # if version is not specified in the url, get the most recent version, otherwise get the specified version
       version = if params[:cb_version].nil? || params[:cb_version].empty?
                   versions.first
@@ -104,5 +105,19 @@ class Cookbooks < Application
     @recipe_files = r.get_rest("cookbooks/#{params[:id]}/libraries")
     display @lib_files
   end
+  
+  # GET /cookbooks/cookbook_id
+  def cb_versions
+    provides :json
+    @versions =  {cookbook_id => get_versions}
+    display @versions
+  end
+  
+  private
+  
+  def get_versions
+    Chef::REST.new(Chef::Config[:chef_server_url]).get_rest("cookbooks/#{cookbook_id}")[cookbook_id].sort!{|x,y| y <=> x }
+  end
+  
   
 end

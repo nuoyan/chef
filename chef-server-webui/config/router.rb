@@ -52,6 +52,7 @@ Merb::Router.prepare do
   match("/cookbooks/:cookbook_id/attributes", :cookbook_id => /[\w\.]+/).to(:controller => "cookbook_attributes", :action => "index")
   match("/cookbooks/:cookbook_id/files", :cookbook_id => /[\w\.]+/).to(:controller => "cookbook_files", :action => "index")
 
+  match("/cookbooks/:cookbook_id", :cookbook_id => /[\w\.]+/, :method => 'get').to(:controller => "cookbooks", :action => "cb_versions")
   match("/cookbooks/:cookbook_id/:cb_version", :cb_version => /[\w\.]+/, :method => 'get').to(:controller => "cookbooks", :action => "show").name(:show_specific_version_cookbook)
   resources :cookbooks
   

@@ -19,6 +19,12 @@
 
 $(document).ready(function(){
 
+  $('form#edit_environment, form#create_environment').submit(function(event) {
+    var form = $(this);
+    $('input#attributes').attr('value', BCJTEP.save('json'))
+  });
+
+
   $('form#edit_role, form#create_role').submit(function(event) {
     var form = $(this);
     var to_role = $('ul#for_role').sortable('toArray');

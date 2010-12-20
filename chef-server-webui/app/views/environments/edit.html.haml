@@ -1,3 +1,6 @@
 .block#block-tables
   .content
-    %h2 Not Implemented
+    %h2.title= "Edit #{h @environment.name}"
+    .inner
+      = partial('navigation', :active => 'edit')
+  = partial('form', :header => "Edit Environment #{@environment.name}", :form_id => 'edit_environment', :submit_name => "Save Environment", :submit_id => "edit_environment_button", :form_for => 'edit', :form_url => url(:environment, @environment.name) )

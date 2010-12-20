@@ -273,5 +273,29 @@ class Application < Merb::Controller
   def convert_newline_to_br(string)
     string.to_s.gsub(/\n/, '<br />') unless string.nil?
   end
+  
+  
+  def format_exception(exception)
+    require 'pp'
+    pretty_params = StringIO.new
+    PP.pp({:request_params => params}, pretty_params)
+    "#{exception.class.name}: #{exception.message}\n#{pretty_params.string}\n#{exception.backtrace.join("\n")}"
+  end
+  
+  def conflict?(exception)
+    exception.kind_of?(Net::HTTPServerException) && exception.message =~ /409/
+  end
+
+  def forbidden?(exception)
+    exception.kind_of?(Net::HTTPServerException) && exception.message =~ /403/
+  end
+
+  def not_found?(exception)
+    exception.kind_of?(Net::HTTPServerException) && exception.message =~ /404/
+  end
+
+  def bad_request?(exception)
+    exception.kind_of?(Net::HTTPServerException) && exception.message =~ /400/
+  end
 
 end

@@ -16,7 +16,7 @@
             %table.table
               %tr
                 %th.first Name
-                %th.last Version(s)
+                %th.last Condition(s)
               - if @environment.cookbook_versions.empty?
                 %tr
                   %td{:colspan => 2} This environment does not include any cookbook version restrictions
@@ -25,3 +25,6 @@
                   %tr
                     %td= name
                     %td= versions
+          .left
+            %h3 Attributes
+            = build_tree('envattrs', @environment.attributes)

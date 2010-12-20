@@ -1,0 +1,81 @@
+.content
+  .inner
+    = form(:action => form_url, :method => :post, :id => form_id, :class => 'form') do
+  
+      - if form_for == "edit"
+        %input(type="hidden" name="_method" value="put")
+      - else
+        %div.group.form
+          %label.label Name
+          = text_field :id => "environment_name", :name => "name", :class => "text_field", :value => params.has_key?(:name) ? h(params[:name]) : @environment.name 
+          %span.description The name of the Environment
+        
+      %input(type="hidden" name="attributes" id="attributes")
+        
+      %div.group.form
+        %label.label Description
+        = text_area(params.has_key?(:description) ? h(params[:description]) : @environment.description, :name => "description", :class => "text_area", :id => "environment_description")
+        %span.description A description of this Environment
+
+      %div.group.form
+        %label.label Cookbook Versions
+
+        %table.table#cookbooks_table
+          %tr
+            %th.first{:colspan => 2} Cookbook Name
+            %th Conditions
+            %th Status
+            %th.last &nbsp;
+          - even = false;
+          - if @environment.cookbook_versions.size >= 0
+            - @environment.cookbook_versions.each do  |k,v|
+              %tr{ :class => even ? "even" : "odd" }
+                %td{:colspan => 2}= k
+                %td= v
+                %td STATUS:POOP
+                %td
+                  %input.button{:onclick => "javascript:void(0)", :type => "button", :value => "Edit"}/
+                  %input.button{:onclick => "removeTableRow($(this).parent().parent())", :type => "button", :value => "Remove"}/
+                - even = (not even)
+        %a{:href => "javascript:void(0)", :onclick => "addTableRow()"} Add Row    
+      
+      
+      %div.group.form{:style => "position:relative;"}
+        %label.label Attributes 
+        = partial 'layout/jsonedit', :json => @environment.attributes.to_json
+        %span.description A JSON hash for attributes for nodes of this environment.  These attributes will only be applied if the node does not already have a value for the attributes.
+
+      %div.group
+        .actions-bar
+          .actions= submit submit_name, :id => submit_id, :class => 'button'
+
+:javascript
+  var cookbook_names = ['#{@cookbooks.join("', '")}'];
+
+  function jQuerySuggest(timestamp) {
+    jQuery(function() {    
+      jQuery("#cookbooks_box_" + timestamp).suggest(cookbook_names,
+        {
+          onSelect: function() {cb_name = this.value; $.getJSON("/cookbooks/"+ cb_name, function(result) {jQuery("#conditions_box_" + timestamp).suggest(result[cb_name],{onSelect: function() {alert("You selected: " + this.value)}, buttonId: $("#conditions_box_button")}); });}, 
+          buttonId: $("#combobox_button")
+        });			
+    });
+    
+  }
+
+  /*
+    Remove the current row
+  */
+  function removeTableRow(jQrow){
+      jQrow.remove();
+  }
+  
+  function addTableRow(){
+      var timestamp = new Date().getTime();
+      //var row = '<tr><td>FOO</td></tr>';
+      //var row = '<tr id=' + '"' + timestamp + '">' + '<td>' + '<input id=' + '"' + 'cookbooks_box_' + timestamp + '" name="' + 'cookbooks_box_' + timestamp + '" ' + 'onblur="if (this.value == "") {this.value = "e.g. Apache";}" onfocus="if (this.value == "e.g. Apache") {this.value = "";}" type="text" value="e.g. Apache" autocomplete="off"><img id="combobox_button" src="/images/combobox_button.png"></td>' + '<td>' + '<input id=' + '"' + 'conditions_box_' + timestamp + '" name="' + 'conditions_box_' + timestamp + '" ' + ' onblur="if (this.value == "") {this.value = "e.g. >= 0.3.5";}" onfocus="if (this.value == "e.g. >= 0.3.5") {this.value = "";}" type="text" value="e.g. >= 0.3.5"><img id="conditions_box_button" src="/images/combobox_button.png"></td><td>STATUS:POOP</td><td><input class="button" onclick="removeTableRow($(this).parent().parent())" type="button" value="Remove"></td>';
+      var row = '<tr id=' + '"' + timestamp + '">' + '<td colspan="2">' + '<input id=' + '"' + 'cookbooks_box_' + timestamp + '" name="' + 'cookbooks_box_' + timestamp + '" ' + 'type="text" autocomplete="off"><img id="combobox_button" src="/images/combobox_button.png"></td>' + '<td>' + '<input id=' + '"' + 'conditions_box_' + timestamp + '" name="' + 'conditions_box_' + timestamp + '" ' + 'type="text"><img id="conditions_box_button" src="/images/combobox_button.png"></td><td>STATUS:POOP</td><td><input class="button" onclick="removeTableRow($(this).parent().parent())" type="button" value="Remove"></td>';
+      $("#cookbooks_table tbody").append(row);
+      
+      jQuerySuggest(timestamp);
+  }

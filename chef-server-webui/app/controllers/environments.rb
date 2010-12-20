@@ -1,5 +1,6 @@
 #
 # Author:: Stephen Delano (<stephen@opscode.com>)
+# Author:: Nuo Yan (<nuo@opscode.com>)
 # Copyright:: Copyright (c) 2010 Opscode, Inc.
 # License:: Apache License, Version 2.0
 #
@@ -38,36 +39,78 @@ class Environments < Application
 
   # GET /environments/:id
   def show
-    @environment = begin
-                     Chef::Environment.load(params[:id])
-                   rescue => e
-                     Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-                     @_message = "Could not load environment #{params[:id]}"
-                     Chef::Environment.new
-                   end
+    load_environment
     render
   end
 
   # GET /environemnts/new
   def new
-    # TODO: implement this
+    @environment = Chef::Environment.new
+    load_cookbooks
     render
   end
 
   # POST /environments
   def create
-    # TODO: implement this
+    begin
+      @environment = Chef::Environment.new
+      @environment.name(params[:name])
+      @environment.description(params[:description]) if params[:description] != ''
+      @environment.attributes(JSON.parse(params[:attributes])) if params[:attributes] != ''
+      @environment.cookbook_versions(search_params_for_cookbook_versions)
+      @environment.create
+      redirect(url(:environments), :message => { :notice => "Created Environment #{@environment.name}" })
+    rescue Chef::Exceptions::ValidationFailed => e
+      Chef::Log.debug("Got 400 bad request creating environment #{params[:name]}\n#{format_exception(e)}")
+      redirect(url(:new_environment), :message => { :error => "The new environment is not formed correctly. Check for illegal characters in the environment's name or body, and check that the body is formed correctly."})
+    rescue Net::HTTPServerException => e
+      if bad_request?(e)
+        Chef::Log.debug("Got 400 bad request creating environment #{params[:name]}\n#{format_exception(e)}")
+        redirect(url(:new_environment), :message => { :error => "The new environment is not formed correctly. Check for illegal characters in the environment's name or body, and check that the body is formed correctly."})
+      elsif conflict?(e)
+        Chef::Log.debug("Got 409 conflict creating environment #{params[:name]}\n#{format_exception(e)}")
+        redirect(url(:new_environment), :message => { :error => "An environment with that name already exists"})
+      elsif forbidden?(e)
+        # Currently it's not possible to get 403 here. I leave the code here for completeness and may be useful in the future.[nuo]
+        Chef::Log.debug("Got 403 forbidden creating environment #{params[:name]}\n#{format_exception(e)}")
+        redirect(url(:new_environment), :message => { :error => "Permission Denied. You do not have permission to create an environment."})
+      else
+        Chef::Log.error("Error communicating with the API server\n#{format_exception(e)}")
+        raise
+      end
+    end
   end
 
   # GET /environments/:id/edit
   def edit
-    # TODO: implement this
+    load_environment
+    load_cookbooks
     render
   end
 
   # PUT /environments/:id
   def update
-    # TODO: implement this
+    begin
+      @environment = Chef::Environment.load(params[:id])
+      @environment.description(params[:description]) if params[:description] != ''
+      @environment.attributes(JSON.parse(params[:attributes])) if params[:attributes] != ''
+      @environment.cookbook_versions(@environment.cookbook_versions.merge!(search_params_for_cookbook_versions))
+      @environment.save
+      redirect(url(:environment, :id=> params[:id]), :message => { :notice => "Updated Environment #{@environment.name}" })
+    rescue => e
+      if not_found?(e)
+        # Currently it's not possible to get 403 here. I leave the code here for completeness and may be useful in the future.[nuo]
+        Chef::Log.debug("Got 404 Not Found updating environment #{params[:id]}\n#{format_exception(e)}")
+        redirect(url(:edit_environment, :id=>params[:id]), :message => { :error => "Environment #{params[:id]} not found."})
+      elsif forbidden?(e)
+        # Currently it's not possible to get 403 here. I leave the code here for completeness and may be useful in the future.[nuo]
+        Chef::Log.debug("Got 403 forbidden updating environment #{params[:id]}\n#{format_exception(e)}")
+        redirect(url(:edit_environment, :id=>params[:id]), :message => { :error => "Permission Denied. You do not have permission to edit an environment."})
+      else
+        Chef::Log.error("Error communicating with the API server\n#{format_exception(e)}")
+        redirect(url(:edit_environment, :id => params[:id]), :message => { :error => "Error communicating with the API server. Could not update the environment."})
+      end
+    end
   end
 
   # DELETE /environments/:id
@@ -130,4 +173,46 @@ class Environments < Application
     end
     redirect referer
   end
+
+  private
+
+  def load_environment
+    begin
+      @environment = Chef::Environment.load(params[:id])
+    rescue Net::HTTPServerException => e
+      if not_found?(e)
+        Chef::Log.debug("API server returned 404 when requesting environment #{params[:id]}\n#{format_exception(e)}")
+        redirect(url(:environments), :message => {:error => "Environment #{params[:id]} not found."})
+      elsif forbidden?(e)
+        # Currently, 403 may not be returned but leave this case here for completeness
+        Chef::Log.debug("API server returned 403 when requesting environment #{params[:id]}\n#{format_exception(e)}")
+        redirect(url(:environments), :message => {:error => "Permission denied. You do not have permission to view the environment."})
+      else
+        Chef::Log.error(format_exception(e))
+        redirect(url(:environments), :message => {:error => "Could not load environment #{params[:id]}"})
+      end
+    end
+  end
+
+  def load_cookbooks
+    begin
+      # @cookbooks is a hash, keys are cookbook names, values are their URIs.
+      @cookbooks = Chef::REST.new(Chef::Config[:chef_server_url]).get_rest("cookbooks").keys
+    rescue Net::HTTPServerException => e
+      Chef::Log.error(format_exception(e))
+      redirect(url(:new_environment), :message => { :error => "Could not load the list of available cookbooks."})
+    end
+  end
+
+  def search_params_for_cookbook_versions
+    cookbooks = {}
+    params.each do |k,v|
+      combobox_id = k[/cookbooks_box_(\d+)/, 1]
+      unless combobox_id.nil?
+        cookbooks[v] = params["conditions_box_#{combobox_id}"]
+      end
+    end
+    cookbooks
+  end
+
 end
